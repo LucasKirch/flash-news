@@ -1,52 +1,84 @@
-import { Image, StyleSheet, Platform } from 'react-native';
-
-import { HelloWave } from '@/components/HelloWave';
+import { Image, StyleSheet, Platform,  SafeAreaView, ScrollView, View, Text, Button } from 'react-native';
+import React, { useEffect, useState } from 'react';
 import ParallaxScrollView from '@/components/ParallaxScrollView';
-import { ThemedText } from '@/components/ThemedText';
-import { ThemedView } from '@/components/ThemedView';
+import { getNews } from '../services/newsApi';
+
+interface Article {
+  titulo: string;
+  introducao: string;
+}
 
 export default function HomeScreen() {
+
+  const [articles, setArticles] = useState<Article[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const articlesPerPage = 10;
+
+  useEffect(() => {
+    const fetchNews = async () => {
+      try {
+        const news = await getNews();
+        setArticles(news);
+      } catch (err) {
+        setError(true);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchNews();
+  }, []);
+
+  const handleNextPage = () => {
+    setCurrentPage((prevPage) => Math.min(prevPage + 1, Math.ceil(articles.length / articlesPerPage)));
+  };
+
+  const handlePrevPage = () => {
+    setCurrentPage((prevPage) => Math.max(prevPage - 1, 1));
+  };
+
+  const startIndex = (currentPage - 1) * articlesPerPage;
+  const selectedArticles = articles.slice(startIndex, startIndex + articlesPerPage);
+
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <Text style={styles.message}>Carregando...</Text>
+      </SafeAreaView>
+    );
+  }
+
+  if (error) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <Text style={styles.message}>Erro ao carregar as notícias</Text>
+      </SafeAreaView>
+    );
+  }
+
+
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({ ios: 'cmd + d', android: 'cmd + m' })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-        <ThemedText>
-          Tap the Explore tab to learn more about what's included in this starter app.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          When you're ready, run{' '}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+   
+  <SafeAreaView style={styles.container}>
+        <Image style={styles.reactLogo}
+        source={require("../../assets/images/newsFlash.png")}>
+      </Image>
+  <ScrollView>
+    {selectedArticles.map((article, index) => (
+      <View key={index} style={styles.article}>
+        <Text style={styles.title}>{article.titulo}</Text>
+        <Text style={styles.description}>{article.introducao}</Text>
+      </View>
+    ))}
+  </ScrollView>
+  <View style={styles.pagination}>
+    <Button title="Anterior" onPress={handlePrevPage} disabled={currentPage === 1} />
+    <Text style={styles.pageNumber}>{currentPage}</Text>
+    <Button title="Próxima" onPress={handleNextPage} disabled={currentPage === Math.ceil(articles.length / articlesPerPage)} />
+  </View>
+</SafeAreaView>
   );
 }
 
@@ -61,10 +93,47 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   reactLogo: {
-    height: 178,
-    width: 290,
+    height: 250,
+    width: 440,
     bottom: 0,
-    left: 0,
-    position: 'absolute',
+    left: -35,
+  },
+  container: {
+    flex: 1,
+    backgroundColor: '#f8f8f8',
+    padding: 16,
+  },
+  article: {
+    marginBottom: 16,
+    padding: 16,
+    backgroundColor: '#fff',
+    borderRadius: 8,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 5,
+    elevation: 2,
+  },
+  title: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 8,
+  },
+  description: {
+    fontSize: 14,
+    color: '#555',
+  },
+  message: {
+    fontSize: 18,
+    textAlign: 'center',
+    marginVertical: 20,
+  },
+  pagination: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 16,
+  },
+  pageNumber: {
+    fontSize: 18,
   },
 });
